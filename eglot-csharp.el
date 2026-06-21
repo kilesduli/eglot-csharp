@@ -100,7 +100,7 @@
                                 (with-current-buffer buffer
                                   (revert-buffer t t)))
                               (remhash uri ec-request-table))
-                          (message "no source finded")))
+                          (message "no source found")))
                       :error-fn
                       (lambda (result)
                         (ignore result)
