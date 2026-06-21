@@ -58,12 +58,21 @@
         (plist-put capabilities :experimental new)))
     capabilities))
 
-(defun ec-normalize-file-name (uri)
+(defun ec-retrival-file-component-from-uri (uri)
   (when (string-match "\\`csharp:\\(.*/\\)[^/]+\\.csproj/\\(decompiled\\|generated\\)/\\(.+\\)\\'" uri)
-    (file-name-concat (match-string 1 uri)
-                      ".cache"
-                      (match-string 2 uri)
-                      (match-string 3 uri))))
+    (list (match-string 1 uri)
+          (match-string 2 uri)
+          (match-string 3 uri))))
+
+(defun ec-normalize-file-name (uri)
+  (let ((components (ec-retrival-file-component-from-uri uri)))
+    (setq components (apply #'list (car components) ".cache" (cdr components)))
+    (apply #'file-name-concat components)))
+
+(defun ec-read-uri-file-as-string (filename)
+  (with-temp-buffer
+    (insert-file-contents (concat filename ".uri"))
+    (buffer-string)))
 
 (defun ec-async-request-metadata (uri)
   (let (request-id)
@@ -77,7 +86,7 @@
                         (ignore projectName assemblyName symbolName)
                         (if source
                             (let* ((unhex-uri (decode-coding-string (url-unhex-string uri)
-                                              'utf-8))
+                                                                    'utf-8))
                                    (filename (ec-normalize-file-name unhex-uri))
                                    (urifile (concat filename ".uri"))
                                    (buffer (find-buffer-visiting filename)))
@@ -117,9 +126,7 @@
   "Return the original metadata URI for cached paths, or call OLDFN with args."
   (if (and ec-enable-csharp-metadata-support
            (file-exists-p (concat (car-safe args) ".uri")))
-      (with-temp-buffer
-        (insert-file-contents (concat (car-safe args) ".uri"))
-        (buffer-string))
+      (ec-read-uri-file-as-string (car-safe args))
     (apply oldfn args)))
 
 (advice-add #'eglot-uri-to-path :filter-return #'ec-uri-to-path)
