@@ -76,7 +76,9 @@
                       (eglot--lambda (projectName assemblyName symbolName source)
                         (ignore projectName assemblyName symbolName)
                         (if source
-                            (let* ((filename (ec-normalize-file-name uri))
+                            (let* ((unhex-uri (decode-coding-string (url-unhex-string uri)
+                                              'utf-8))
+                                   (filename (ec-normalize-file-name unhex-uri))
                                    (urifile (concat filename ".uri"))
                                    (buffer (find-buffer-visiting filename)))
                               (unless (file-directory-p (file-name-directory filename))
@@ -101,7 +103,9 @@
   "Translate csharp metadata URI to a local cache path."
   (if (and ec-enable-csharp-metadata-support
            (string-prefix-p "csharp:" uri))
-      (let* ((filename (ec-normalize-file-name uri))
+      (let* ((unhex-uri (decode-coding-string (url-unhex-string uri)
+                                              'utf-8))
+             (filename (ec-normalize-file-name unhex-uri))
              (urifile (concat filename ".uri")))
         (unless (or (gethash uri ec-request-table)
                     (file-exists-p urifile))
