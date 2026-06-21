@@ -129,8 +129,28 @@
       (ec-read-uri-file-as-string (car-safe args))
     (apply oldfn args)))
 
-(advice-add #'eglot-uri-to-path :filter-return #'ec-uri-to-path)
-(advice-add #'eglot-path-to-uri :around        #'ec-path-to-uri)
+(defun ec-bind-server-to-cache-file (filename &rest r)
+  "Bind the metadata cache file to its corresponding server.
+
+The server and the metadata URI file must belong to the same project."
+  (let ((filename (file-truename filename)))
+    (if (and ec-enable-csharp-metadata-support
+             (string-suffix-p ".cs" filename)
+             (file-exists-p (concat filename ".uri"))
+             (not (gethash filename eglot--servers-by-xrefed-file)))
+        (when-let* ((uri (ec-read-uri-file-as-string filename))
+                    (uri-project (car (ec-retrival-file-component-from-uri uri)))
+                    (server (catch 'return
+                              (maphash (lambda (key val)
+                                         (when (string= uri-project (cdr key))
+                                           (throw 'return val)))
+                                       eglot--servers-by-project)
+                              nil)))
+          (puthash filename server eglot--servers-by-xrefed-file)))))
+
+(advice-add #'eglot-uri-to-path  :filter-return #'ec-uri-to-path)
+(advice-add #'eglot-path-to-uri  :around        #'ec-path-to-uri)
+(advice-add #'find-file-noselect :after         #'ec-bind-server-to-cache-file)
 
 (provide 'eglot-csharp)
 ;;; eglot-csharp.el ends here
